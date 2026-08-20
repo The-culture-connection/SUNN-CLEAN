@@ -9,3 +9,6 @@ dist/
 # Never commit service-account credentials
 *firebase-adminsdk*.json
 serviceAccount*.json
+
+# Local notes that may hold credentials
+railway-vars-*.txt

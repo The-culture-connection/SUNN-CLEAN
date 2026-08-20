@@ -1,49 +1,64 @@
 # Deploying to Railway
 
-The repo is a monorepo. The deployable app lives in `WEBSITE/`, **not** at the repo
-root. The repo root only contains docs and static HTML mockups — no `package.json`.
+This is an npm-workspaces monorepo. The deployable apps live in `WEBSITE/`, **not** at the
+repo root — the root only holds docs and static HTML mockups.
 
-That is why builds failed with:
+Two Railway services deploy from this one directory:
 
-```
-⚠ Script start.sh not found
-✖ No start command detected.
-```
-
-Railpack was looking at the repo root, found no Node project, and had nothing to run.
+- **customer** → `@sunnclean/customer` (Next.js, port from `$PORT`)
+- **admin** → `@sunnclean/admin` (Next.js, port from `$PORT`)
 
 ## Required settings — per service
 
-You need **two** Railway services (customer + admin), both pointing at this same repo.
-For each one, under **Settings**:
+Under each service's **Settings**:
 
 | Setting | Customer service | Admin service |
 | --- | --- | --- |
 | Root Directory | `WEBSITE` | `WEBSITE` |
-| Config-as-code path | `railway.customer.json` | `railway.admin.json` |
-
-Setting **Root Directory** is the fix for the build error. The config path is what keeps
-the two services running different apps out of one directory.
-
-### If the config file isn't picked up
-
-Some Railway projects resolve the config path from the repo root rather than the service
-root. If the build log doesn't mention your config file, either set the path to
-`WEBSITE/railway.customer.json` / `WEBSITE/railway.admin.json`, or skip config-as-code
-entirely and set these two fields directly in **Settings → Build / Deploy**:
-
-| | Customer | Admin |
-| --- | --- | --- |
 | Build Command | `npm run build:customer` | `npm run build:admin` |
 | Start Command | `npm run start:customer` | `npm run start:admin` |
+
+Set **Build Command** and **Start Command** explicitly in the Railway UI. Do not rely on
+auto-detection, and do not rely on the `railway.*.json` files (see below).
+
+### Why the commands must be explicit
+
+Railpack auto-detects a start command by checking, in order:
+
+1. a `start` script in `package.json`
+2. a `main` field
+3. `index.js` / `index.ts` in the project root
+4. an Nx workspace
+
+This repo matches none of them, by design. The root `package.json` deliberately has no
+plain `start` script — it has `start:customer` and `start:admin`, because a single `start`
+could only ever launch one of the two apps. Railpack cannot guess which app a given
+service should run, so it fails with:
+
+```
+✖ No start command detected.
+```
+
+That error means "tell me which app", not "your build is broken".
+
+### About railway.admin.json / railway.customer.json
+
+Railway only auto-loads a config file named `railway.json` or `railway.toml`. These files
+use custom names, so they are **not** read unless a config path is set per service — and
+in practice that path setting has not resolved correctly alongside a Root Directory of
+`WEBSITE`.
+
+Treat these two files as documentation of intent. The Railway UI settings in the table
+above are the source of truth. If you do get config-as-code working, try the path
+`WEBSITE/railway.customer.json` (relative to the repo root, not the service root).
 
 Do **not** put `npm ci` in the build command — Railway already runs an install step, and
 repeating it roughly doubles build time.
 
 ## Ports
 
-Both apps read `$PORT` (`next start -p ${PORT:-3000}`), which Railway injects. Leave the
-port unset in Railway; don't hardcode 3000/3001.
+Both apps run `next start -p ${PORT:-3000}` and read `$PORT`, which Railway injects. Leave
+the port unset in Railway; don't hardcode 3000/3001.
 
 ## Environment variables
 
@@ -69,3 +84,8 @@ not just a restart.
 ## Node version
 
 `.nvmrc` pins Node 20; Railpack reads it automatically.
+
+## Security note
+
+Never commit service-account JSON. `FIREBASE_PRIVATE_KEY_BASE64` belongs in Railway's
+variables, and the root `.gitignore` blocks `*firebase-adminsdk*.json`.
