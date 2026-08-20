@@ -1,0 +1,5 @@
+{
+  "comment": "Only single-field indexes are used, and Firestore creates those automatically. Every query in this app deliberately avoids composite indexes so the site works the moment it is deployed rather than returning errors until an index finishes building. This file exists so `firebase deploy` has something to point at.",
+  "indexes": [],
+  "fieldOverrides": []
+}

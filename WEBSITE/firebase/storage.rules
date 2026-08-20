@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Approved review photos, published gallery pairs, certification badges
+    // and public certificate PDFs.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;      // uploads go through the admin API
+    }
+
+    // Un-moderated review photos. Not readable until an admin approves the
+    // review, at which point the server MOVES the object into public/.
+    match /quarantine/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Job photos and anything else: private, served via short-lived signed URLs
+    // minted server-side after an auth check.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
