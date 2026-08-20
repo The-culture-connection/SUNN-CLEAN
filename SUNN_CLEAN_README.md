@@ -33,16 +33,29 @@ service and one crew, the booking page politely tells visitors to call you.
    bill will almost certainly be a couple of dollars — the free allowances cover
    most of this — but set the alert anyway.
 
-### 3. Get your Web API key
+### 3. Your Web API key
 
-This is the one value I couldn't fetch for you. In the Firebase console:
-**Project settings → General → Your apps**. If there's no web app, click the
-`</>` icon to create one. Copy the `apiKey` value.
+Already supplied: `AIzaSyBWHMSO8RdQq0r0n6LYgdn_I99wuqLrYv4`
+
+**One key, and only the admin service needs it.** The key belongs to the
+Firebase *project*, not to a site — there is no second key for the second site.
+And the customer site doesn't use it at all: `NEXT_PUBLIC_FIREBASE_API_KEY`
+appears in exactly one file, the admin login screen. Customers never sign in,
+so the customer app doesn't even have the Firebase browser SDK installed.
+
+**It is not a secret.** It ships inside the login page's JavaScript, so anyone
+can read it from their browser. It identifies your project; it grants nothing.
+What protects the portal is the password, the `admin: true` claim, and
+`ADMIN_ALLOWED_EMAILS`.
+
+Worth doing once you have a domain: Google Cloud Console → APIs & Services →
+Credentials → your browser key → add an **HTTP referrer restriction** for your
+admin domain, so nobody else can spend your quota.
 
 ### 4. Environment variables
 
 Copy `.env.example` to `.env` and fill it in. Both Railway services need the
-same variables.
+shared block; only the admin service needs the `NEXT_PUBLIC_FIREBASE_*` block.
 
 ```
 FIREBASE_PROJECT_ID=sunn-cleaning
@@ -50,7 +63,8 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@sunn-cleaning.iam.gserviceaccount.
 FIREBASE_PRIVATE_KEY_BASE64=<see below>
 FIREBASE_STORAGE_BUCKET=sunn-cleaning.firebasestorage.app
 
-NEXT_PUBLIC_FIREBASE_API_KEY=<from step 3>
+# ---- ADMIN SERVICE ONLY (not needed on the customer service) ----
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBWHMSO8RdQq0r0n6LYgdn_I99wuqLrYv4
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=sunn-cleaning.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=sunn-cleaning
 
@@ -87,6 +101,15 @@ change it in the Firebase console under Authentication → Users.
 There is deliberately no signup screen. Admin access is granted by running that
 command, never by filling in a form.
 
+> **You have to run this yourself** — I couldn't. Setting the `admin: true`
+> claim needs a Google OAuth token, and the sandbox I built this in has no
+> network route to Google's auth servers. It will work from your machine.
+>
+> Creating the user in the Firebase console instead is *not* enough on its own.
+> The portal checks for the `admin: true` custom claim, which only this script
+> sets. A user without it gets a clear "this account does not have admin
+> access" message rather than a silent failure.
+
 ### 6. Run it locally
 
 ```bash
@@ -113,6 +136,13 @@ Create **two services** in one Railway project, both pointing at this GitHub rep
 | Start command | `npm run start:customer` | `npm run start:admin` |
 | Watch paths | `apps/customer/**`, `packages/shared/**` | `apps/admin/**`, `packages/shared/**` |
 | Domain | `yourdomain.com` | `admin.yourdomain.com` |
+| `NEXT_PUBLIC_FIREBASE_*` | not needed | **required** |
+
+> **`NEXT_PUBLIC_*` values are baked in when the service builds, not read when
+> it runs.** If you add the API key to Railway after the admin service has
+> already deployed, restarting won't pick it up — you need a redeploy. The login
+> screen says exactly this if the key is missing, rather than showing a cryptic
+> `auth/invalid-api-key`.
 
 > **Why root directory is `/` and not `apps/customer`.** The two apps share the
 > pricing and scheduling engine in `packages/shared`. If Railway's build context
@@ -122,7 +152,8 @@ Create **two services** in one Railway project, both pointing at this GitHub rep
 > the invoice can never drift apart. Watch paths keep each service from
 > rebuilding on the other's changes.
 
-Both services need every environment variable from step 4.
+Both services need the shared block from step 4. Only the admin service needs
+the `NEXT_PUBLIC_FIREBASE_*` values.
 
 ---
 
@@ -249,7 +280,7 @@ npm run grant-admin <email>
 
 ## Still to do before launch
 
-- Paste your Web API key (step 3) — the admin login can't work without it
+- Run `npm run grant-admin` — the portal has no way in until you do
 - Add your services and prices
 - Write the Terms and Privacy pages, and have a lawyer read them
 - Confirm with your accountant whether commercial cleaning is taxable in your

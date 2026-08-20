@@ -11,7 +11,7 @@
   "dependencies": {
     "@sunnclean/shared": "*",
     "luxon": "^3.5.0",
-    "next": "14.2.15",
+    "next": "^14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "server-only": "^0.0.1",
