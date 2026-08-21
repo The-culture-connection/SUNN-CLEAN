@@ -16,6 +16,7 @@
     "test": "npm run test -w @sunnclean/shared",
     "typecheck": "npm run typecheck -w @sunnclean/shared && npm run typecheck -w @sunnclean/customer && npm run typecheck -w @sunnclean/admin",
     "seed": "node --env-file=.env scripts/seed.mjs",
-    "grant-admin": "node --env-file=.env scripts/grant-admin.mjs"
+    "grant-admin": "node --env-file=.env scripts/grant-admin.mjs",
+    "firebase-env": "node scripts/firebase-env.mjs"
   }
 }

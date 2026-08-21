@@ -58,15 +58,20 @@ export async function loadReviews() {
 }
 
 /**
- * Objects under `public/` are world-readable, so a plain URL is enough and it
- * can be cached by the browser. Anything else gets a short-lived signed URL.
+ * Every object in the bucket is private at the IAM level — including the ones
+ * under `public/`. Firebase Storage rules govern the firebasestorage.googleapis.com
+ * API, not storage.googleapis.com URLs, so a plain URL returns 403 regardless of
+ * what storage.rules says. Mint a short-lived signed URL for everything instead.
+ * The pages that call this are force-dynamic, so each render issues a fresh URL.
  */
 async function publicUrl(path: string): Promise<string> {
-  if (path.startsWith('public/')) {
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-    return `https://storage.googleapis.com/${bucketName}/${path}`;
+  if (!path) return '';
+  try {
+    return await signedUrl(path, 60);
+  } catch (err) {
+    console.error('[storage] could not sign', path, err instanceof Error ? err.message : err);
+    return '';
   }
-  try { return await signedUrl(path, 60); } catch { return ''; }
 }
 
 export { publicUrl };

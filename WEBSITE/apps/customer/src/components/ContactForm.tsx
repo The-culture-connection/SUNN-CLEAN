@@ -43,7 +43,7 @@ export function ContactForm() {
       </div>
       <div className="field">
         <label htmlFor="cm">Message *</label>
-        <textarea id="cm" rows={5} required value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} />
+        <textarea id="cm" rows={5} required minLength={5} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} />
       </div>
       <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={website}
         onChange={(e) => setWebsite(e.target.value)}

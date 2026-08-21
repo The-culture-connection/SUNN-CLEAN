@@ -446,10 +446,23 @@ export async function audit(entry: Omit<AuditEntry, 'id' | 'createdAt'>) {
 }
 
 export async function listAudit(targetId?: string, limit = 50): Promise<AuditEntry[]> {
-  let q: FirebaseFirestore.Query = db().collection(COL.audit);
-  if (targetId) q = q.where('targetId', '==', targetId);
-  const snap = await q.orderBy('createdAt', 'desc').limit(limit).get();
-  return snap.docs.map((d) => withId<AuditEntry>(d));
+  const col = db().collection(COL.audit);
+
+  // Unfiltered: a single-field index on createdAt covers this, and Firestore
+  // creates those automatically.
+  if (!targetId) {
+    const snap = await col.orderBy('createdAt', 'desc').limit(limit).get();
+    return snap.docs.map((d) => withId<AuditEntry>(d));
+  }
+
+  // Filtering AND ordering in Firestore would need a composite index, which
+  // means the page 500s until the index finishes building. An audit trail for
+  // one target is small, so filter in Firestore and sort in memory instead —
+  // same trade-off as deleteCrew.
+  const snap = await col.where('targetId', '==', targetId).get();
+  return snap.docs.map((d) => withId<AuditEntry>(d))
+    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    .slice(0, limit);
 }
 
 export { FieldValue };
